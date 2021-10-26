@@ -97,7 +97,7 @@ function collide($data, $move) {
   $nextPosition = arrayMergeNumericValues($currPosition,$nextMove);
   if(isMyBody($data->you->body, $nextPosition) ||
      thereIsAnotherSnake($data->board->snakes, $nextPosition)||
-     impasse($data, (object) $nextPosition, $move)
+     impasse($data, (object) $nextPosition, $move, $currPosition)
      )
     return true;
 
@@ -119,13 +119,13 @@ function anObstacle($position, $data) {
   }
 
 
-  /*if($position->x >= $data->board->width ||
+  if($position->x >= $data->board->width ||
      $position->x < 0 ||
      $position->y >= $data->board->height ||
      $position->y < 0
   ) {
     return true;
-  }*/
+  }
 
   return false;
 }
@@ -184,7 +184,7 @@ function somethingInPath($data, $currPosition, $nextDirection) {
     return false;
 }
 
-function impasse($data, $currPosition, $nextDirection) {
+function impasse($data, $currPosition, $nextDirection, $prevPosition) {
   error_log('CurrentPosition: '.print_r($currPosition, true));
   switch ($nextDirection) {
     //left
@@ -193,7 +193,7 @@ function impasse($data, $currPosition, $nextDirection) {
         error_log('Left B: '.print_r((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + (-1))), true));
         if(anObstacle((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + 1)),$data) &&
            anObstacle((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + (-1))),$data) &&
-            somethingInPath($data, $currPosition, $nextDirection)
+            somethingInPath($data, $prevPosition, $nextDirection)
             )
            return true;
       break;
@@ -203,7 +203,7 @@ function impasse($data, $currPosition, $nextDirection) {
         error_log('UP B: '.print_r((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + 1)), true));
         if(anObstacle((object)(array( 'x' => $currPosition->x + 1 , 'y' => $currPosition->y + 1)),$data) &&
           anObstacle((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + 1)),$data) &&
-            somethingInPath($data, $currPosition, $nextDirection))
+            somethingInPath($data, $prevPosition, $nextDirection))
           return true;
       break;
     //down
@@ -212,7 +212,7 @@ function impasse($data, $currPosition, $nextDirection) {
         error_log('DOWN B: '.print_r((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + (-1))), true));
         if(anObstacle((object)(array( 'x' => $currPosition->x + 1 , 'y' => $currPosition->y + (-1))),$data) &&
             anObstacle((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + (-1))),$data) &&
-            somethingInPath($data, $currPosition, $nextDirection))
+            somethingInPath($data, $prevPosition, $nextDirection))
           return true;
       break;
     //right
@@ -221,7 +221,7 @@ function impasse($data, $currPosition, $nextDirection) {
         error_log('RIGHT B: '.print_r((object)(array( 'x' => $currPosition->x + 1 , 'y' => $currPosition->y + (-1))), true));
         if(anObstacle((object)(array( 'x' => $currPosition->x + 1 , 'y' => $currPosition->y + 1)),$data) &&
             anObstacle((object)(array( 'x' => $currPosition->x + 1 , 'y' => $currPosition->y + (-1))),$data) &&
-            somethingInPath($data, $currPosition, $nextDirection))
+            somethingInPath($data, $prevPosition, $nextDirection))
           return true;
       break;
     default:
