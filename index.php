@@ -17,9 +17,9 @@ if ($requestUri == '/')
 {   //Index Section
     $apiversion = "1";
     $author     = "fmocchetti";           // TODO: Your Battlesnake Username
-    $color      = "#888888";    // TODO: Personalize
-    $head       = "default";    // TODO: Personalize
-    $tail       = "default";    // TODO: Personalize
+    $color      = "#6600ff";    // TODO: Personalize
+    $head       = "caffeine";    // TODO: Personalize
+    $tail       = "weight";    // TODO: Personalize
 
     indexResponse($apiversion,$author,$color,$head, $tail);
 }
@@ -59,3 +59,4 @@ else
 {
     header($_SERVER['SERVER_PROTOCOL'].' 404 Not Found');
 }
+
