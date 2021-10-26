@@ -87,7 +87,7 @@ function thereIsAnotherSnake($snakes, $nextPosition) {
   return false;
 }
 
-function collide($data, $move) {
+function collide($data, $move, $tries) {
   //error_log('Collide check');
   $possibleMove = [ 'left', 'up', 'down', 'right'];
   $currPosition = currentPosition($data->you);
@@ -97,7 +97,8 @@ function collide($data, $move) {
   $nextPosition = arrayMergeNumericValues($currPosition,$nextMove);
   if(isMyBody($data->you->body, $nextPosition) ||
      thereIsAnotherSnake($data->board->snakes, $nextPosition)||
-     impasse($data, (object) $nextPosition, $move)
+      ($tries > 5 && impasse($data, (object) $nextPosition, $move, $currPosition)) ||
+      ($tries > 9 && conflict($data, (object) $nextPosition, $move, $currPosition))
      )
     return true;
 
@@ -119,13 +120,13 @@ function anObstacle($position, $data) {
   }
 
 
-  /*if($position->x >= $data->board->width ||
+  if($position->x >= $data->board->width ||
      $position->x < 0 ||
      $position->y >= $data->board->height ||
      $position->y < 0
   ) {
     return true;
-  }*/
+  }
 
   return false;
 }
@@ -152,28 +153,28 @@ function somethingInPath($data, $currPosition, $nextDirection) {
     switch($nextDirection) {
         case MOVE_LEFT:
             foreach($obstacles as $obstacle) {
-                if(($obstacle->x < $x && $obstacle->x >= 0) && $obstacle->y == $y ) {
+                if(($obstacle->x < $x && $obstacle->x >= $x - 2) && $obstacle->y == $y ) {
                     return true;
                 }
             }
             break;
         case MOVE_RIGHT:
             foreach($obstacles as $obstacle) {
-                if(($obstacle->x > $x && $obstacle->x < $data->board->width) && $obstacle->y == $y ) {
+                if(($obstacle->x > $x && $obstacle->x <= $x + 2) && $obstacle->y == $y ) {
                     return true;
                 }
             }
             break;
         case MOVE_DOWN:
             foreach($obstacles as $obstacle) {
-                if(($obstacle->y < $y && $obstacle->y >= 0) && $obstacle->x == $x ) {
+                if(($obstacle->y < $y && $obstacle->y >= $y - 2) && $obstacle->x == $x ) {
                     return true;
                 }
             }
             break;
         case MOVE_UP:
             foreach($obstacles as $obstacle) {
-                if(($obstacle->y > $y && $obstacle->y < $data->board->height) && $obstacle->x == $x ) {
+                if(($obstacle->y > $y && $obstacle->y <= $y + 2) && $obstacle->x == $x ) {
                     return true;
                 }
             }
@@ -184,51 +185,96 @@ function somethingInPath($data, $currPosition, $nextDirection) {
     return false;
 }
 
-function impasse($data, $currPosition, $nextDirection) {
+function impasse($data, $currPosition, $nextDirection, $prevPosition) {
   error_log('CurrentPosition: '.print_r($currPosition, true));
   switch ($nextDirection) {
     //left
     case MOVE_LEFT:
-        error_log('Left A: '.print_r((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + 1)), true));
-        error_log('Left B: '.print_r((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + (-1))), true));
-        if(anObstacle((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + 1)),$data) &&
-           anObstacle((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + (-1))),$data) &&
-            somethingInPath($data, $currPosition, $nextDirection)
+        error_log('Left A: '.print_r((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + 1)), true));
+        error_log('Left B: '.print_r((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))), true));
+        if((anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + 1)),$data) &&
+           anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))),$data) &&
+            (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_LEFT)))
             )
            return true;
       break;
     //up
     case MOVE_UP:
-        error_log('UP A: '.print_r((object)(array( 'x' => $currPosition->x + 1 , 'y' => $currPosition->y + 1)), true));
-        error_log('UP B: '.print_r((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + 1)), true));
-        if(anObstacle((object)(array( 'x' => $currPosition->x + 1 , 'y' => $currPosition->y + 1)),$data) &&
-          anObstacle((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + 1)),$data) &&
-            somethingInPath($data, $currPosition, $nextDirection))
+        error_log('UP A: '.print_r((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + 1)), true));
+        error_log('UP B: '.print_r((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $prevPosition->y + 1)), true));
+        if(anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + 1)),$data) &&
+          anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + 1)),$data) &&
+            (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_UP)))
           return true;
       break;
     //down
     case MOVE_DOWN:
-        error_log('UP B: '.print_r((object)(array( 'x' => $currPosition->x + 1 , 'y' => $currPosition->y + (-1))), true));
-        error_log('DOWN B: '.print_r((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + (-1))), true));
-        if(anObstacle((object)(array( 'x' => $currPosition->x + 1 , 'y' => $currPosition->y + (-1))),$data) &&
-            anObstacle((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $currPosition->y + (-1))),$data) &&
-            somethingInPath($data, $currPosition, $nextDirection))
+        error_log('UP B: '.print_r((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))), true));
+        error_log('DOWN B: '.print_r((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))), true));
+        if(anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))),$data) &&
+            anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))),$data) &&
+            (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_DOWN)))
           return true;
       break;
     //right
     case MOVE_RIGHT:
-        error_log('RIGHT A: '.print_r((object)(array( 'x' => $currPosition->x + 1 , 'y' => $currPosition->y + 1)), true));
-        error_log('RIGHT B: '.print_r((object)(array( 'x' => $currPosition->x + 1 , 'y' => $currPosition->y + (-1))), true));
-        if(anObstacle((object)(array( 'x' => $currPosition->x + 1 , 'y' => $currPosition->y + 1)),$data) &&
-            anObstacle((object)(array( 'x' => $currPosition->x + 1 , 'y' => $currPosition->y + (-1))),$data) &&
-            somethingInPath($data, $currPosition, $nextDirection))
+        error_log('RIGHT A: '.print_r((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + 1)), true));
+        error_log('RIGHT B: '.print_r((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))), true));
+        if(anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + 1)),$data) &&
+            anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))),$data) &&
+            (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_RIGHT)))
           return true;
       break;
     default:
       break;
   }
   return false;
+}
 
+function conflict($data, $currPosition, $nextDirection, $prevPosition) {
+    error_log('CurrentPosition: '.print_r($currPosition, true));
+    switch ($nextDirection) {
+        //left
+        case MOVE_LEFT:
+            error_log('Left A: '.print_r((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + 1)), true));
+            error_log('Left B: '.print_r((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))), true));
+            if(((anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + 1)),$data) ||
+                anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))),$data)) &&
+                (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_LEFT)))
+            )
+                return true;
+            break;
+        //up
+        case MOVE_UP:
+            error_log('UP A: '.print_r((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + 1)), true));
+            error_log('UP B: '.print_r((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $prevPosition->y + 1)), true));
+            if((anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + 1)),$data) ||
+                anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + 1)),$data)) &&
+                (somethingInPath($data, $prevPosition, $nextDirection)  || outOfBoundaries($data, MOVE_UP)))
+                return true;
+            break;
+        //down
+        case MOVE_DOWN:
+            error_log('UP B: '.print_r((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))), true));
+            error_log('DOWN B: '.print_r((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))), true));
+            if((anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))),$data) ||
+                anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))),$data)) &&
+                (somethingInPath($data, $prevPosition, $nextDirection)  || outOfBoundaries($data, MOVE_DOWN)))
+                return true;
+            break;
+        //right
+        case MOVE_RIGHT:
+            error_log('RIGHT A: '.print_r((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + 1)), true));
+            error_log('RIGHT B: '.print_r((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))), true));
+            if((anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + 1)),$data) ||
+                anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))),$data)) &&
+                (somethingInPath($data, $prevPosition, $nextDirection)  || outOfBoundaries($data, MOVE_RIGHT)))
+                return true;
+            break;
+        default:
+            break;
+    }
+    return false;
 }
 
 function detectLastDirection($you) {
@@ -286,6 +332,64 @@ function findFood($foods,$you) {
   }
 }
 
+function goingToCrashWithSnake($data,$move) {
+    //error_log('Collide check');
+    if(!count($data->board->snakes))
+        return false;
+    $currPosition = currentPosition($data->you);
+    $x = $currPosition->x;
+    $y = $currPosition->y;
+    switch($move) {
+        case MOVE_LEFT:
+            foreach($data->board->snakes as $snake) {
+                //si alguna de las viboras esta cerca de la comida y si es mas grande o igual a mi devuelvo false
+                if(($snake->length >= $data->you-> length) &&
+                    (($snake->head->x == ($x - 2) && $snake->head->y == $y) ||
+                    ($snake->head->x == ($x - 1) && $snake->head->y == ($y - 1)) ||
+                    ($snake->head->x == ($x - 1) && $snake->head->y == ($y + 1)))) {
+                    return true;
+                }
+            }
+            break;
+        case MOVE_RIGHT:
+            foreach($data->board->snakes as $snake) {
+                //si alguna de las viboras esta cerca de la comida y si es mas grande o igual a mi devuelvo false
+                if(($snake->length >= $data->you-> length) &&
+                    (($snake->head->x == ($x + 2) && $snake->head->y == $y) ||
+                    ($snake->head->x == ($x + 1) && $snake->head->y == ($y - 1)) ||
+                    ($snake->head->x == ($x + 1) && $snake->head->y == ($y + 1)))) {
+                    return true;
+                }
+            }
+            break;
+        case MOVE_DOWN:
+            foreach($data->board->snakes as $snake) {
+                //si alguna de las viboras esta cerca de la comida y si es mas grande o igual a mi devuelvo false
+                if(($snake->length >= $data->you-> length) &&
+                    (($snake->head->x == $x && $snake->head->y == ($y - 2)) ||
+                    ($snake->head->x == ($x - 1) && $snake->head->y == ($y - 1)) ||
+                    ($snake->head->x == ($x + 1) && $snake->head->y == ($y - 1)))) {
+                    return true;
+                }
+            }
+            break;
+        case MOVE_UP:
+            foreach($data->board->snakes as $snake) {
+                //si alguna de las viboras esta cerca de la comida y si es mas grande o igual a mi devuelvo false
+                if(($snake->length >= $data->you-> length) &&
+                    (($snake->head->x == $x && $snake->head->y == ($y + 2)) ||
+                    ($snake->head->x == ($x - 1) && $snake->head->y == ($y + 1)) ||
+                    ($snake->head->x == ($x + 1) && $snake->head->y == ($y + 1)))) {
+                    return true;
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    return false;
+}
+
 function move($data) {
   $nextDirection = 0;
   $you = $data->you;
@@ -297,7 +401,7 @@ function move($data) {
     $nextDirection = findFood($food,$you);
   }
 
-  return nextMove($data,$nextDirection,5);
+  return nextMove($data,$nextDirection,13);
 }
 
 //[ 'left', 'up', 'down', 'right']
@@ -308,7 +412,7 @@ function nextMove($data,$nextMove,$tries) {
 
   $possibleMove = [ 'left', 'up', 'down', 'right'];
   //error_log('Checking: '.$possibleMove[$nextMove]);
-  if(outOfBoundaries($data,$nextMove) || collide($data,$nextMove)) {
+  if(outOfBoundaries($data,$nextMove) || collide($data,$nextMove, $tries) || goingToCrashWithSnake($data,$nextMove)) {
     $nextMove = ++$nextMove % 4;
     $nextMove = nextMove($data,$nextMove,$tries);
   } else {
