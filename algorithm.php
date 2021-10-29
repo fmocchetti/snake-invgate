@@ -54,15 +54,16 @@ function currentPosition($you) {
 }
 
 
-function outOfBoundaries($data, $move) {
+function outOfBoundaries($data, $move,$modifier = [0, 0]) {
   $possibleMove = [ 'left', 'up', 'down', 'right'];
   $currPosition = currentPosition($data->you);
   $nextMove = translate($move);
   $nextPosition = arrayMergeNumericValues($currPosition,$nextMove);
-  if($nextPosition["x"] >= $data->board->width ||
-     $nextPosition["x"] < 0 ||
-     $nextPosition["y"] >= $data->board->height ||
-     $nextPosition["y"] < 0
+  error_log('Checking boundarie on : '.print_r($nextPosition, true));
+  if($nextPosition["x"] + $modifier[0]>= $data->board->width ||
+     $nextPosition["x"] + $modifier[0] < 0 ||
+     $nextPosition["y"] + $modifier[1] >= $data->board->height ||
+     $nextPosition["y"] + $modifier[1] < 0
      )
     return true;
 
@@ -194,7 +195,7 @@ function impasse($data, $currPosition, $nextDirection, $prevPosition) {
         error_log('Left B: '.print_r((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))), true));
         if((anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + 1)),$data) &&
            anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))),$data) &&
-            (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_LEFT)))
+            (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_LEFT, [-1,0])))
             )
            return true;
       break;
@@ -204,16 +205,16 @@ function impasse($data, $currPosition, $nextDirection, $prevPosition) {
         error_log('UP B: '.print_r((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $prevPosition->y + 1)), true));
         if(anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + 1)),$data) &&
           anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + 1)),$data) &&
-            (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_UP)))
+            (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_UP, [0,1])))
           return true;
       break;
     //down
     case MOVE_DOWN:
-        error_log('UP B: '.print_r((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))), true));
+        error_log('DOWN A: '.print_r((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))), true));
         error_log('DOWN B: '.print_r((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))), true));
         if(anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))),$data) &&
             anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))),$data) &&
-            (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_DOWN)))
+            (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_DOWN, [0, -1])))
           return true;
       break;
     //right
@@ -222,7 +223,7 @@ function impasse($data, $currPosition, $nextDirection, $prevPosition) {
         error_log('RIGHT B: '.print_r((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))), true));
         if(anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + 1)),$data) &&
             anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))),$data) &&
-            (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_RIGHT)))
+            (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_RIGHT, [1,0])))
           return true;
       break;
     default:
@@ -240,7 +241,7 @@ function conflict($data, $currPosition, $nextDirection, $prevPosition) {
             error_log('Left B: '.print_r((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))), true));
             if(((anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + 1)),$data) ||
                 anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))),$data)) &&
-                (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_LEFT)))
+                (somethingInPath($data, $prevPosition, $nextDirection) || outOfBoundaries($data, MOVE_LEFT, [-1,0])) && !thereIsFood($data, MOVE_LEFT))
             )
                 return true;
             break;
@@ -250,16 +251,16 @@ function conflict($data, $currPosition, $nextDirection, $prevPosition) {
             error_log('UP B: '.print_r((object)(array( 'x' => $currPosition->x + (-1) , 'y' => $prevPosition->y + 1)), true));
             if((anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + 1)),$data) ||
                 anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + 1)),$data)) &&
-                (somethingInPath($data, $prevPosition, $nextDirection)  || outOfBoundaries($data, MOVE_UP)))
+                (somethingInPath($data, $prevPosition, $nextDirection)  || outOfBoundaries($data, MOVE_UP, [0,1])) && !thereIsFood($data, MOVE_UP))
                 return true;
             break;
         //down
         case MOVE_DOWN:
-            error_log('UP B: '.print_r((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))), true));
+            error_log('DOWN A: '.print_r((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))), true));
             error_log('DOWN B: '.print_r((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))), true));
             if((anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))),$data) ||
                 anObstacle((object)(array( 'x' => $prevPosition->x + (-1) , 'y' => $prevPosition->y + (-1))),$data)) &&
-                (somethingInPath($data, $prevPosition, $nextDirection)  || outOfBoundaries($data, MOVE_DOWN)))
+                (somethingInPath($data, $prevPosition, $nextDirection)  || outOfBoundaries($data, MOVE_DOWN, [0, -1])) && !thereIsFood($data, MOVE_DOWN))
                 return true;
             break;
         //right
@@ -268,7 +269,7 @@ function conflict($data, $currPosition, $nextDirection, $prevPosition) {
             error_log('RIGHT B: '.print_r((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))), true));
             if((anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + 1)),$data) ||
                 anObstacle((object)(array( 'x' => $prevPosition->x + 1 , 'y' => $prevPosition->y + (-1))),$data)) &&
-                (somethingInPath($data, $prevPosition, $nextDirection)  || outOfBoundaries($data, MOVE_RIGHT)))
+                (somethingInPath($data, $prevPosition, $nextDirection)  || outOfBoundaries($data, MOVE_RIGHT, [1,0])) && !thereIsFood($data, MOVE_RIGHT))
                 return true;
             break;
         default:
@@ -330,6 +331,24 @@ function findFood($foods,$you) {
       return MOVE_UP;
     return MOVE_DOWN;
   }
+}
+
+function thereIsFood($data, $move) {
+    $currPosition = currentPosition($data->you);
+    $nextMove = translate($move);
+    $nextPosition = arrayMergeNumericValues($currPosition,$nextMove);
+    error_log("Next position: ".print_r($nextPosition, true));
+    foreach ($data->board->food as $food) {
+        error_log("Food: ".print_r($food, true));
+        if ($nextPosition["x"] == $food->x &&
+            $nextPosition["y"] == $food->y) {
+            error_log("There is food");
+            return true;
+        }
+
+    }
+
+    return false;
 }
 
 function goingToCrashWithSnake($data,$move) {

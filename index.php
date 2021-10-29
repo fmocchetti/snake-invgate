@@ -16,7 +16,7 @@ $requestUri = strtok($_SERVER['REQUEST_URI'], '?');
 if ($requestUri == '/')  
 {   //Index Section
     $apiversion = "1";
-    $author     = "fmocchetti";           // TODO: Your Battlesnake Username
+    $author     = "fmocchetti";           // TODO: Your Battle Snake Username
     $color      = "#6600ff";    // TODO: Personalize
     $head       = "caffeine";    // TODO: Personalize
     $tail       = "weight";    // TODO: Personalize
@@ -41,7 +41,7 @@ elseif ($requestUri == '/move')
     /*if($data->turn > 93)
       die;*/
 
-    // TODO - Implement your Battlesnake here!
+    // TODO - Implement your Battle Snake here!
     $possibleMove = [ 'left', 'up', 'down', 'right'];
     $move = move($data);
     error_log('Sending:'.$possibleMove[$move]);
